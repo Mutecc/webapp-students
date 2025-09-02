@@ -36,12 +36,15 @@
             // URL of your Google Apps Script web app
             const web_app_url = 'https://script.google.com/macros/s/AKfycbyUUE7pph1wYluGubAMvR8gf41pgd_cvO8pIhBRSJZUKGot7Uh-Hu2mj7UtHjqNAfEk/exec';
             
-            // Function to check for In-App Browser
+            // Function to check for In-App Browser, while excluding Google Chrome
             function is_InAppBrowser() {
                 const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+                const isChrome = /Chrome/.test(userAgent);
+                
+                // Check for common in-app browser user agents, excluding Chrome
                 return (
-                    /FBAV|FBAN|LINE|Tiktok|Instagram|Twitter|Snapchat|Telegram|MicroMessenger|Pinterest|Reddit|Threads/i.test(userAgent) || 
-                    (/CriOS/.test(userAgent) && /Safari/.test(userAgent))
+                    !isChrome && 
+                    /FBAV|FBAN|LINE|Tiktok|Instagram|Twitter|Snapchat|Telegram|MicroMessenger|Pinterest|Reddit|Threads/i.test(userAgent)
                 );
             }
 
@@ -50,7 +53,6 @@
             const urlParams = new URLSearchParams(window.location.search);
             
             // If the URL already has the 'openExternalBrowser' parameter, we assume it's opened in a main browser
-            // so we skip the modal and load the iframe immediately.
             if (urlParams.has('openExternalBrowser')) {
                 mainIframe.src = web_app_url;
                 return;
@@ -74,18 +76,19 @@
                     window.location.href = urlToRedirect.toString();
                 });
 
-                copyLinkButton.addEventListener('click', () => {
-                    const tempInput = document.createElement('textarea');
-                    tempInput.value = urlToRedirect.toString();
-                    document.body.appendChild(tempInput);
-                    tempInput.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(tempInput);
-                    
-                    copyMessage.classList.remove('hidden');
-                    setTimeout(() => {
-                        copyMessage.classList.add('hidden');
-                    }, 2000); // Hide message after 2 seconds
+                copyLinkButton.addEventListener('click', async () => {
+                    try {
+                        await navigator.clipboard.writeText(urlToRedirect.toString());
+                        copyMessage.textContent = 'คัดลอกแล้ว!';
+                        copyMessage.classList.remove('hidden');
+                        setTimeout(() => {
+                            copyMessage.classList.add('hidden');
+                        }, 2000);
+                    } catch (err) {
+                        copyMessage.textContent = 'ไม่สามารถคัดลอกได้!';
+                        copyMessage.classList.remove('hidden');
+                        console.error('Failed to copy text: ', err);
+                    }
                 });
             } else {
                 // If it's not an In-App Browser, load the Apps Script URL directly into the iframe
